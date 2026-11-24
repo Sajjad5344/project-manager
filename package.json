@@ -1,7 +1,7 @@
 {
   "name": "project-manager",
   "productName": "مدیریت پروژه",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "برنامه مدیریت پروژه‌های کاری",
   "main": "main.js",
   "author": "Sajjad5344",
