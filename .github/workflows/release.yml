@@ -39,6 +39,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb ./artifacts/*.deb
+      - name: Check desktop entry and icons
+        run: |
+          test -f /usr/share/applications/project-manager.desktop || { echo "::error::desktop entry missing"; ls /usr/share/applications; exit 1; }
+          grep -E "^(Name|Icon|Exec|StartupWMClass)=" /usr/share/applications/project-manager.desktop
+          find /usr/share/icons -iname "*project*" | head -20
       - name: Launch app and make sure it stays running
         run: |
           BIN=""
@@ -47,7 +52,6 @@ jobs:
             if [ -f "$f" ] && [ -x "$f" ]; then BIN="$f"; break; fi
           done
           echo "Launching: $BIN"
-          test -f /usr/share/applications/project-manager.desktop || { echo "::error::desktop entry missing"; ls /usr/share/applications; exit 1; }
           xvfb-run -a "$BIN" > app.log 2>&1 &
           PID=$!
           sleep 30
@@ -61,6 +65,24 @@ jobs:
           fi
           pkill -f "$BIN" || true
           echo "Smoke test passed."
+      - name: Post diagnostics to commit
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "## test-deb diagnostics"
+            echo '```'
+            echo "--- desktop entry ---"
+            ls /usr/share/applications | grep -i project
+            cat /usr/share/applications/project-manager.desktop 2>&1
+            echo "--- icons ---"
+            find /usr/share/icons -iname "*project*" 2>/dev/null | head -20
+            echo "--- app output (tail) ---"
+            tail -80 app.log 2>/dev/null || echo "(no app.log)"
+            echo '```'
+          } > diag.md
+          gh api repos/${{ github.repository }}/commits/${{ github.sha }}/comments -F body=@diag.md || true
 
   build-windows:
     runs-on: windows-latest
