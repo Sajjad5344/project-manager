@@ -41,12 +41,10 @@
         "--no-sandbox"
       ],
       "desktop": {
-        "entry": {
-          "Name": "Project Manager",
-          "Comment": "Project management app",
-          "StartupWMClass": "project-manager",
-          "Categories": "Office;ProjectManagement;"
-        }
+        "Name": "Project Manager",
+        "Comment": "Project management app",
+        "StartupWMClass": "ProjectManager",
+        "Categories": "Office;"
       }
     },
     "deb": {
