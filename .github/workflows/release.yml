@@ -47,11 +47,16 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
-      - name: Create GitHub Release
+      - name: Create or update GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" artifacts/* \
-            --title "مدیریت پروژه ${GITHUB_REF_NAME}" \
-            --notes "نسخه دسکتاپ برنامه مدیریت پروژه. فایل‌ها: .exe (ویندوز)، .deb (دبیان/اوبونتو)، .AppImage (لینوکس)." \
-            --verify-tag || gh release upload "${GITHUB_REF_NAME}" artifacts/* --clobber
+          ls -la artifacts
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" artifacts/* --clobber
+          else
+            gh release create "$TAG" artifacts/* \
+              --title "مدیریت پروژه $TAG" \
+              --notes "نسخه دسکتاپ برنامه مدیریت پروژه. فایل‌ها: ProjectManager-Setup (ویندوز .exe)، .deb (دبیان/اوبونتو)، .AppImage (لینوکس)."
+          fi
