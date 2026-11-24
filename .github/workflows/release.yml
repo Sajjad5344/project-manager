@@ -47,6 +47,7 @@ jobs:
             if [ -f "$f" ] && [ -x "$f" ]; then BIN="$f"; break; fi
           done
           echo "Launching: $BIN"
+          test -f /usr/share/applications/project-manager.desktop || { echo "::error::desktop entry missing"; ls /usr/share/applications; exit 1; }
           xvfb-run -a "$BIN" > app.log 2>&1 &
           PID=$!
           sleep 30
