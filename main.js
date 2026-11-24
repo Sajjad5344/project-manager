@@ -1,6 +1,14 @@
 const { app, BrowserWindow, Menu, shell } = require('electron');
 const path = require('path');
 
+const ICON = path.join(__dirname, 'build', 'icons', '512x512.png');
+
+// Links the running window to project-manager.desktop so the taskbar/dock uses
+// the right icon and name on Linux.
+if (process.platform === 'linux') {
+  app.setDesktopName('project-manager.desktop');
+}
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1280,
@@ -8,7 +16,9 @@ function createWindow() {
     minWidth: 800,
     minHeight: 600,
     title: 'مدیریت پروژه',
+    icon: ICON,
     autoHideMenuBar: true,
+    backgroundColor: '#08080a',
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,

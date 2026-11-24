@@ -1,7 +1,7 @@
 {
   "name": "project-manager",
   "productName": "مدیریت پروژه",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "برنامه مدیریت پروژه‌های کاری",
   "main": "main.js",
   "author": "Sajjad5344",
@@ -24,7 +24,8 @@
     },
     "files": [
       "main.js",
-      "app/**/*"
+      "app/**/*",
+      "build/icons/512x512.png"
     ],
     "linux": {
       "target": [
@@ -38,7 +39,15 @@
       "icon": "build/icons",
       "executableArgs": [
         "--no-sandbox"
-      ]
+      ],
+      "desktop": {
+        "entry": {
+          "Name": "Project Manager",
+          "Comment": "Project management app",
+          "StartupWMClass": "project-manager",
+          "Categories": "Office;ProjectManagement;"
+        }
+      }
     },
     "deb": {
       "depends": [

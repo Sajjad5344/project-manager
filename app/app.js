@@ -1,6 +1,7 @@
 'use strict';
 
 const STORAGE_KEY = 'project-manager:v1';
+const THEME_KEY = 'project-manager:theme';
 
 const TAB_LABELS = {
   overview: 'مشخصات پروژه',
@@ -111,9 +112,13 @@ function renderSidebar() {
     if (t) createProject(t);
   };
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') add(); });
+  const isDark = document.documentElement.dataset.theme === 'dark';
 
   side.append(
-    h('h2', {}, 'پروژه‌ها'),
+    h('div', { class: 'side-head' },
+      h('h2', {}, 'پروژه‌ها'),
+      h('button', { class: 'icon theme-toggle', title: isDark ? 'حالت روشن' : 'حالت تاریک', onclick: toggleTheme },
+        isDark ? '☀' : '☾')),
     h('div', { class: 'stack' }, input, h('button', { class: 'btn primary', onclick: add }, '+ افزودن پروژه')),
     h('ul', { class: 'project-list' },
       state.projects.map((p) => h('li', {
@@ -123,16 +128,17 @@ function renderSidebar() {
         h('span', { class: 'grow' }, p.title),
         h('button', {
           class: 'icon danger', title: 'حذف پروژه',
-          onclick: (e) => {
+          onclick: async (e) => {
             e.stopPropagation();
-            if (!confirm(`پروژه «${p.title}» و همه اطلاعات آن حذف شود؟`)) return;
+            const ok = await askConfirm(`پروژه «${p.title}» و همه اطلاعات آن حذف شود؟`, { danger: true, okText: 'حذف' });
+            if (!ok) return;
             removeFrom(state.projects, p.id);
             if (ui.projectId === p.id) { ui.projectId = state.projects[0] ? state.projects[0].id : null; ui.tabId = null; }
             changed();
           },
         }, '✕'),
       ))),
-    state.projects.length === 0 ? h('p', { class: 'muted' }, 'هنوز پروژه‌ای ندارید.') : null,
+    ...(state.projects.length === 0 ? [h('p', { class: 'muted' }, 'هنوز پروژه‌ای ندارید.')] : []),
   );
 }
 
@@ -162,16 +168,17 @@ function renderTabBar(p, active) {
       h('button', { class: 'tab-btn', onclick: () => { ui.tabId = t.id; render(); } }, t.title),
       h('button', {
         class: 'icon', title: 'تغییر نام تب',
-        onclick: () => {
-          const n = prompt('نام جدید تب:', t.title);
+        onclick: async () => {
+          const n = await askText('نام جدید تب', t.title);
           if (n && n.trim()) { t.title = n.trim(); changed(); }
         },
       }, '✎'),
       h('button', {
         class: 'icon danger', title: 'حذف تب',
-        onclick: () => {
-          if (p.tabs.length <= 1) { alert('حداقل یک تب باید باقی بماند.'); return; }
-          if (!confirm(`تب «${t.title}» و محتوای آن حذف شود؟`)) return;
+        onclick: async () => {
+          if (p.tabs.length <= 1) { await askInfo('حداقل یک تب باید باقی بماند.'); return; }
+          const ok = await askConfirm(`تب «${t.title}» و محتوای آن حذف شود؟`, { danger: true, okText: 'حذف' });
+          if (!ok) return;
           removeFrom(p.tabs, t.id);
           ui.tabId = null;
           changed();
@@ -478,4 +485,56 @@ function renderMembers(p, tab) {
   );
 }
 
+/* ---------- in-app dialogs (native confirm/prompt misbehave in Electron) ---------- */
+
+function modal({ title = '', message = '', input = null, okText = 'تأیید', cancelText = 'انصراف', danger = false, info = false }) {
+  return new Promise((resolve) => {
+    const field = input !== null ? h('input', { type: 'text', value: input }) : null;
+    let overlay = null;
+    const done = (v) => {
+      document.removeEventListener('keydown', onKey, true);
+      if (overlay) overlay.remove();
+      resolve(v);
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); done(null); }
+      else if (e.key === 'Enter' && !(e.target instanceof HTMLTextAreaElement)) {
+        e.preventDefault();
+        done(field ? field.value : true);
+      }
+    };
+    const ok = h('button', { class: 'btn ' + (danger ? 'danger' : 'primary'), onclick: () => done(field ? field.value : true) }, okText);
+    const cancel = info ? null : h('button', { class: 'btn', onclick: () => done(null) }, cancelText);
+    overlay = h('div', { class: 'modal-overlay', onclick: (e) => { if (e.target === overlay) done(null); } },
+      h('div', { class: 'modal', role: 'dialog' },
+        title ? h('h3', {}, title) : null,
+        message ? h('p', {}, message) : null,
+        field,
+        h('div', { class: 'modal-actions' }, cancel, ok)));
+    document.body.append(overlay);
+    document.addEventListener('keydown', onKey, true);
+    if (field) { field.focus(); field.select(); } else ok.focus();
+  });
+}
+const askConfirm = (message, opts = {}) => modal({ message, ...opts }).then((v) => v === true);
+const askText = (title, value) => modal({ title, input: value, okText: 'ذخیره' }).then((v) => (typeof v === 'string' ? v : null));
+const askInfo = (message) => modal({ message, okText: 'باشه', info: true });
+
+/* ---------- theme (light / dark) ---------- */
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  localStorage.setItem(THEME_KEY, theme);
+}
+function toggleTheme() {
+  applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+  renderSidebar();
+}
+function initTheme() {
+  const saved = localStorage.getItem(THEME_KEY);
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  applyTheme(saved || (prefersDark ? 'dark' : 'light'));
+}
+
+initTheme();
 render();
