@@ -46,7 +46,7 @@ jobs:
             case "$f" in *chrome*|*.so*|*.sh|*.pak|*.bin|*.dat) continue;; esac
             if [ -f "$f" ] && [ -x "$f" ]; then BIN="$f"; break; fi
           done
-          echo "Launching: $BIN"
+          echo "Launching: $BIN"; ls -la /opt/ProjectManager/chrome-sandbox
           set +e
           timeout 40 xvfb-run -a "$BIN" > app.log 2>&1
           RC=$?

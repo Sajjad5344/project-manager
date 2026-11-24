@@ -35,7 +35,10 @@
       "maintainer": "Sajjad5344 <sajjad5344@users.noreply.github.com>",
       "synopsis": "Project manager desktop app",
       "artifactName": "${productName}-${version}-${arch}.${ext}",
-      "icon": "build/icons"
+      "icon": "build/icons",
+      "executableArgs": [
+        "--no-sandbox"
+      ]
     },
     "deb": {
       "depends": [
@@ -48,7 +51,8 @@
         "libatspi2.0-0",
         "libuuid1",
         "libsecret-1-0"
-      ]
+      ],
+      "afterInstall": "build/after-install.sh"
     },
     "win": {
       "target": [
