@@ -1,6 +1,13 @@
 const { app, BrowserWindow, Menu, shell } = require('electron');
 const path = require('path');
 
+// On Linux, the Chromium sandbox needs a setuid helper (chrome-sandbox) that
+// .deb/AppImage installs don't set up, and Ubuntu 24.04+ blocks the fallback,
+// so the app fails to start. The renderer itself stays sandboxed.
+if (process.platform === 'linux') {
+  app.commandLine.appendSwitch('no-sandbox');
+}
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1280,

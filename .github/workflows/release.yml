@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build-linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,6 +26,35 @@ jobs:
           path: |
             dist/*.deb
             dist/*.AppImage
+
+  test-deb:
+    needs: build-linux
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux
+          path: artifacts
+      - name: Install .deb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb ./artifacts/*.deb
+      - name: Launch app and make sure it stays running
+        run: |
+          BIN=""
+          for f in /opt/ProjectManager/*; do
+            case "$f" in *chrome*|*.so*|*.sh|*.pak|*.bin|*.dat) continue;; esac
+            if [ -f "$f" ] && [ -x "$f" ]; then BIN="$f"; break; fi
+          done
+          echo "Launching: $BIN"
+          set +e
+          timeout 40 xvfb-run -a "$BIN" > app.log 2>&1
+          RC=$?
+          set -e
+          echo "--- app output ---"; cat app.log
+          echo "exit code: $RC (124 = still running when timeout stopped it)"
+          if [ "$RC" -ne 124 ]; then echo "::error::App exited early"; exit 1; fi
+          if grep -q -E "FATAL|Fatal|No usable sandbox" app.log; then echo "::error::Fatal error in output"; exit 1; fi
 
   build-windows:
     runs-on: windows-latest
@@ -43,7 +72,7 @@ jobs:
           path: dist/*.exe
 
   release:
-    needs: [build-linux, build-windows]
+    needs: [test-deb, build-windows]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
