@@ -56,6 +56,20 @@ jobs:
           if [ "$RC" -ne 124 ]; then echo "::error::App exited early"; exit 1; fi
           if grep -q -E "FATAL|Fatal|No usable sandbox" app.log; then echo "::error::Fatal error in output"; exit 1; fi
 
+      - name: Post diagnostics on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "## test-deb diagnostics"
+            echo '```'
+            echo "--- installed files ---"; ls -la /opt/ProjectManager 2>&1 | head -40
+            echo "--- app output ---"; tail -150 app.log 2>/dev/null || echo "(no app.log)"
+            echo '```'
+          } > diag.md
+          gh api repos/${{ github.repository }}/commits/${{ github.sha }}/comments -F body=@diag.md || true
+
   build-windows:
     runs-on: windows-latest
     steps:
